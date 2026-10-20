@@ -96,3 +96,4 @@ Add a metric there and in the adapter, then rerun `make_template.py`.
 ## Support
 
 InduSol America / VIPA Controls America
+Support@indusolamerica.com

@@ -8,3 +8,4 @@ buffer.sqlite
 *.log.*
 dumps/
 .env
+release/
