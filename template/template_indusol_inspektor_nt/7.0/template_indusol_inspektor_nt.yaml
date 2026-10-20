@@ -1,0 +1,1133 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+  - uuid: aa043904353b41d0bd90cb081b4bc3ff
+    name: Templates/Industrial networks
+  templates:
+  - uuid: 3c33e4f290fa43b3a57ceeb0b4d28be4
+    template: INspektor NT PROFINET by Zabbix trapper
+    name: INspektor NT PROFINET by Zabbix trapper
+    description: 'Indu-Sol INspektor NT (PROFINET) diagnostics pushed by the INspektor-Zabbix collector through Zabbix trapper. One host per INspektor; the host name must match NAME in config.txt.
+
+
+      Setup and collector: https://github.com/IndusolAmerica/inspektor-zabbix
+
+      Author: Luis Aguirre, InduSol America'
+    vendor:
+      name: InduSol America
+      version: 7.0-1
+    groups:
+    - name: Templates/Industrial networks
+    items:
+    - uuid: d8700651741e4977becc2ae6318690a5
+      name: Service heartbeat
+      type: TRAP
+      key: inspektor.heartbeat
+      history: 7d
+      value_type: UNSIGNED
+      description: Sent every cycle by INspektor-Zabbix. Missing data means the collector stopped.
+      tags:
+      - tag: component
+        value: service
+      triggers:
+      - uuid: 43266487ed0a4dbfbfc8dd570e9e4b97
+        expression: nodata(/INspektor NT PROFINET by Zabbix trapper/inspektor.heartbeat,{$INSPEKTOR.NODATA})=1
+        name: INspektor-Zabbix service is not sending data
+        priority: HIGH
+        description: No data from the INspektor-Zabbix collector. Check the scheduled task on the collector PC and access to the Zabbix server or proxy on port 10051.
+        tags:
+        - tag: scope
+          value: availability
+    - uuid: 8af0316432954ddc869d0922da738470
+      name: Service version
+      type: TRAP
+      key: inspektor.service.version
+      history: 31d
+      value_type: CHAR
+      trends: '0'
+      preprocessing:
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1d
+      tags:
+      - tag: component
+        value: service
+    - uuid: d70eecf745464cbfb95581ceaaeefbdb
+      name: INspektor reachable
+      type: TRAP
+      key: inspektor.status
+      history: 31d
+      value_type: UNSIGNED
+      description: 1 = the INspektor answered over HTTP, 0 = it did not.
+      tags:
+      - tag: component
+        value: inspektor
+      triggers:
+      - uuid: d5e8a9eba2864cc5ad1e83c9ea99fea9
+        expression: max(/INspektor NT PROFINET by Zabbix trapper/inspektor.status,#3)=0
+        name: INspektor is not reachable
+        priority: HIGH
+        description: The collector could not read the INspektor for 3 consecutive cycles. The collector itself is running.
+        tags:
+        - tag: scope
+          value: availability
+    - uuid: 5210e9c7e18547999c68df88d9bd7d93
+      name: Last read error
+      type: TRAP
+      key: inspektor.error
+      history: 7d
+      value_type: TEXT
+      trends: '0'
+      preprocessing:
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1h
+      tags:
+      - tag: component
+        value: inspektor
+    - uuid: 7e5426712a0c4c7da7ddb983173864a6
+      name: Devices
+      type: TRAP
+      key: inspektor.devices.total
+      history: 31d
+      value_type: UNSIGNED
+      description: Devices currently reported by the INspektor after filtering.
+      tags:
+      - tag: component
+        value: inspektor
+    - uuid: 8ccd05fb2e8e494aa574538c597caa08
+      name: Bus status
+      type: TRAP
+      key: inspektor.bus.status
+      history: 31d
+      value_type: UNSIGNED
+      description: Overall bus status of the current INspektor measurement.
+      valuemap:
+        name: INspektor bus status
+      tags:
+      - tag: component
+        value: inspektor
+      triggers:
+      - uuid: 85484c6cf53643eeab869ac2eab34326
+        expression: last(/INspektor NT PROFINET by Zabbix trapper/inspektor.bus.status)=4
+        name: Bus status is Error
+        priority: HIGH
+        tags:
+        - tag: scope
+          value: availability
+      - uuid: 86134017dbb445f29001956418915b74
+        expression: last(/INspektor NT PROFINET by Zabbix trapper/inspektor.bus.status)=3
+        name: Bus status is Warning
+        priority: WARNING
+        tags:
+        - tag: scope
+          value: performance
+    - uuid: 403d4518a95343839d2335cbfb177cd0
+      name: Unacknowledged alerts
+      type: TRAP
+      key: inspektor.alerts.unack
+      history: 31d
+      value_type: UNSIGNED
+      description: Alerts not yet acknowledged on the INspektor web interface.
+      tags:
+      - tag: component
+        value: inspektor
+    discovery_rules:
+    - uuid: d64420ab338141a78c66fe5fa3231bec
+      name: PROFINET devices discovery
+      type: TRAP
+      key: inspektor.discovery
+      lifetime: '{$INSPEKTOR.LLD.LIFETIME}'
+      description: Device list pushed by INspektor-Zabbix. Only sent while the INspektor is reachable, so an outage does not mark devices as lost. {#ID} is the MAC address (PROFINET, EtherNet/IP) or the station address (PROFIBUS).
+      item_prototypes:
+      - uuid: 32e3efb773b545469e36eb2c6e037d05
+        name: '{#NAME}: Breakdowns'
+        type: TRAP
+        key: device.breakdowns[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: bebc526e850d41958afc8316b580ddf4
+          expression: last(/INspektor NT PROFINET by Zabbix trapper/device.breakdowns[{#ID}])-min(/INspektor NT PROFINET by Zabbix trapper/device.breakdowns[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Breakdowns increased'
+          priority: AVERAGE
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: b438a2709a1b44bda9a6c3a62afa6c44
+        name: '{#NAME}: Restarts'
+        type: TRAP
+        key: device.restarts[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: a593afbc8f7841e5bd49c820b508648f
+          expression: last(/INspektor NT PROFINET by Zabbix trapper/device.restarts[{#ID}])-min(/INspektor NT PROFINET by Zabbix trapper/device.restarts[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Restarts increased'
+          priority: WARNING
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 0ef27f268c3a4ebb979d70d080ae03e6
+        name: '{#NAME}: Frame gaps'
+        type: TRAP
+        key: device.framegaps[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: c8b68e5afb394837b5f2281e571747a8
+          expression: last(/INspektor NT PROFINET by Zabbix trapper/device.framegaps[{#ID}])-min(/INspektor NT PROFINET by Zabbix trapper/device.framegaps[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Frame gaps increased'
+          priority: WARNING
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 6fdd54dc67824fd1b626ba110de51e5f
+        name: '{#NAME}: Max consecutive frame gaps'
+        type: TRAP
+        key: device.framegaps.max[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Longest run of consecutive frame gaps since measurement start. 3 or more usually means a breakdown is close.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+      - uuid: 6ea9dfb3b1f54d1486e6d3320061882b
+        name: '{#NAME}: Frame overtakes'
+        type: TRAP
+        key: device.overtakes[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 2906aa597cea4287a2093e0472285931
+          expression: last(/INspektor NT PROFINET by Zabbix trapper/device.overtakes[{#ID}])-min(/INspektor NT PROFINET by Zabbix trapper/device.overtakes[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Frame overtakes increased'
+          priority: WARNING
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 53394c051c7748d3854ec39e1551dc16
+        name: '{#NAME}: Error frames'
+        type: TRAP
+        key: device.errorframes[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. Physical error frames sent + received (cable, connector, EMC).
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 35b0cab53a4942fcb4aa2ac0494a3c0e
+          expression: last(/INspektor NT PROFINET by Zabbix trapper/device.errorframes[{#ID}])-min(/INspektor NT PROFINET by Zabbix trapper/device.errorframes[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Error frames increased'
+          priority: AVERAGE
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: fdf3fb1d0dd94edeb9100c9ced28c16a
+        name: '{#NAME}: Alarms high'
+        type: TRAP
+        key: device.alarms.high[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. PROFINET-related issue on the device side.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: be0dca86192849d381db583490a0bbaa
+          expression: last(/INspektor NT PROFINET by Zabbix trapper/device.alarms.high[{#ID}])-min(/INspektor NT PROFINET by Zabbix trapper/device.alarms.high[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Alarms high increased'
+          priority: AVERAGE
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: b92a5a5bfe5f4245b6761781e11d683b
+        name: '{#NAME}: Alarms low'
+        type: TRAP
+        key: device.alarms.low[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. Issue external to PROFINET (I/O, motor, etc.).
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 16e82293fd104b1d922a3061bc66cece
+          expression: last(/INspektor NT PROFINET by Zabbix trapper/device.alarms.low[{#ID}])-min(/INspektor NT PROFINET by Zabbix trapper/device.alarms.low[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Alarms low increased'
+          priority: INFO
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: c6f3f1c9a3e64bc3a16345ea0232c836
+        name: '{#NAME}: Jitter peak'
+        type: TRAP
+        key: device.jitter.peak[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: '%'
+        description: 'max(|min|, |max|), the value the INspektor web page shows. Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 40bb7e9c22e4401498fd16627451f1b2
+          expression: last(/INspektor NT PROFINET by Zabbix trapper/device.jitter.peak[{#ID}])>{$INSPEKTOR.JITTER.WARN:"{#ID}"} and nodata(/INspektor NT PROFINET by Zabbix trapper/device.jitter.peak[{#ID}],{$INSPEKTOR.NODATA})=0
+          name: '{#NAME}: Jitter peak above {$INSPEKTOR.JITTER.WARN:"{#ID}"}%'
+          priority: WARNING
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: a973f0aa5bb44b9aa383084e22312bb7
+        name: '{#NAME}: Jitter min'
+        type: TRAP
+        key: device.jitter.min[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: '%'
+        description: 'Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+      - uuid: 3aa5c89db9864464b3e3f540048c96a9
+        name: '{#NAME}: Jitter max'
+        type: TRAP
+        key: device.jitter.max[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: '%'
+        description: 'Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+      - uuid: 0f8432876ab24182b649aba74f3d2a78
+        name: '{#NAME}: Network load in'
+        type: TRAP
+        key: device.netload.in[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: '%'
+        description: Peak of the last minute, as % of a 100 Mbit/s link (12,500,000 bytes/s).
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 62f6c9974aee474ca515cbddd4f69f4a
+          expression: last(/INspektor NT PROFINET by Zabbix trapper/device.netload.in[{#ID}])>{$INSPEKTOR.NETLOAD.WARN:"{#ID}"}
+          name: '{#NAME}: Network load in above {$INSPEKTOR.NETLOAD.WARN:"{#ID}"}%'
+          priority: WARNING
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 46411dd5535f4f8e92ba54964dc6477f
+        name: '{#NAME}: Network load out'
+        type: TRAP
+        key: device.netload.out[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: '%'
+        description: Peak of the last minute, as % of a 100 Mbit/s link (12,500,000 bytes/s).
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 063d4e9287c944c88fe99a57d9fe7aaf
+          expression: last(/INspektor NT PROFINET by Zabbix trapper/device.netload.out[{#ID}])>{$INSPEKTOR.NETLOAD.WARN:"{#ID}"}
+          name: '{#NAME}: Network load out above {$INSPEKTOR.NETLOAD.WARN:"{#ID}"}%'
+          priority: WARNING
+          tags:
+          - tag: scope
+            value: performance
+    tags:
+    - tag: class
+      value: network
+    - tag: target
+      value: inspektor
+    macros:
+    - macro: '{$INSPEKTOR.NODATA}'
+      value: 5m
+      description: Time without data before the collector is considered stopped.
+    - macro: '{$INSPEKTOR.EVENT.WINDOW}'
+      value: 1h
+      description: A counter increase inside this window raises a problem.
+    - macro: '{$INSPEKTOR.LLD.LIFETIME}'
+      value: 7d
+      description: How long a device that left the network keeps its items.
+    - macro: '{$INSPEKTOR.JITTER.WARN}'
+      value: '50'
+      description: 'Jitter peak warning, %. Per device: {$INSPEKTOR.JITTER.WARN:"<MAC>"}.'
+    - macro: '{$INSPEKTOR.NETLOAD.WARN}'
+      value: '20'
+      description: 'Network load warning, % of 100 Mbit/s. Per device: {$INSPEKTOR.NETLOAD.WARN:"<MAC>"}.'
+    valuemaps:
+    - uuid: 1c28c17754a14d658e7b4240626756e6
+      name: INspektor bus status
+      mappings:
+      - value: '0'
+        newvalue: Unknown
+      - value: '1'
+        newvalue: NoData
+      - value: '2'
+        newvalue: Active
+      - value: '3'
+        newvalue: Warning
+      - value: '4'
+        newvalue: Error
+      - value: '5'
+        newvalue: Deactivated
+  - uuid: dc27f63f5f5140f2bba06752909b7d66
+    template: INspektor NT EtherNet-IP by Zabbix trapper
+    name: INspektor NT EtherNet-IP by Zabbix trapper
+    description: 'Indu-Sol INspektor NT (EtherNet/IP) diagnostics pushed by the INspektor-Zabbix collector through Zabbix trapper. One host per INspektor; the host name must match NAME in config.txt.
+
+
+      Setup and collector: https://github.com/IndusolAmerica/inspektor-zabbix
+
+      Author: Luis Aguirre, InduSol America'
+    vendor:
+      name: InduSol America
+      version: 7.0-1
+    groups:
+    - name: Templates/Industrial networks
+    items:
+    - uuid: 93f387d330e1433b92b81904c95de358
+      name: Service heartbeat
+      type: TRAP
+      key: inspektor.heartbeat
+      history: 7d
+      value_type: UNSIGNED
+      description: Sent every cycle by INspektor-Zabbix. Missing data means the collector stopped.
+      tags:
+      - tag: component
+        value: service
+      triggers:
+      - uuid: a92ec4c4a0d04219a2b0ad784e99e636
+        expression: nodata(/INspektor NT EtherNet-IP by Zabbix trapper/inspektor.heartbeat,{$INSPEKTOR.NODATA})=1
+        name: INspektor-Zabbix service is not sending data
+        priority: HIGH
+        description: No data from the INspektor-Zabbix collector. Check the scheduled task on the collector PC and access to the Zabbix server or proxy on port 10051.
+        tags:
+        - tag: scope
+          value: availability
+    - uuid: ea4087adc52a430bb5cbb6c641f05586
+      name: Service version
+      type: TRAP
+      key: inspektor.service.version
+      history: 31d
+      value_type: CHAR
+      trends: '0'
+      preprocessing:
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1d
+      tags:
+      - tag: component
+        value: service
+    - uuid: 549935390a5144eead579cfc2345bcc7
+      name: INspektor reachable
+      type: TRAP
+      key: inspektor.status
+      history: 31d
+      value_type: UNSIGNED
+      description: 1 = the INspektor answered over HTTP, 0 = it did not.
+      tags:
+      - tag: component
+        value: inspektor
+      triggers:
+      - uuid: 4f169f0953974a648d230825e9ea791e
+        expression: max(/INspektor NT EtherNet-IP by Zabbix trapper/inspektor.status,#3)=0
+        name: INspektor is not reachable
+        priority: HIGH
+        description: The collector could not read the INspektor for 3 consecutive cycles. The collector itself is running.
+        tags:
+        - tag: scope
+          value: availability
+    - uuid: ce0254ed77204a429548b587bf195314
+      name: Last read error
+      type: TRAP
+      key: inspektor.error
+      history: 7d
+      value_type: TEXT
+      trends: '0'
+      preprocessing:
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1h
+      tags:
+      - tag: component
+        value: inspektor
+    - uuid: 761ca061c3d74ff1849aca3591d5462e
+      name: Devices
+      type: TRAP
+      key: inspektor.devices.total
+      history: 31d
+      value_type: UNSIGNED
+      description: Devices currently reported by the INspektor after filtering.
+      tags:
+      - tag: component
+        value: inspektor
+    - uuid: 45b0dcd886104efdbe939e18df39a064
+      name: Bus status
+      type: TRAP
+      key: inspektor.bus.status
+      history: 31d
+      value_type: UNSIGNED
+      description: Overall bus status of the current INspektor measurement.
+      valuemap:
+        name: INspektor bus status
+      tags:
+      - tag: component
+        value: inspektor
+      triggers:
+      - uuid: be66896e9e464ad0b9c48904a483ecd9
+        expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/inspektor.bus.status)=4
+        name: Bus status is Error
+        priority: HIGH
+        tags:
+        - tag: scope
+          value: availability
+      - uuid: 1e8d5860be43454cb0090890c28c65b4
+        expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/inspektor.bus.status)=3
+        name: Bus status is Warning
+        priority: WARNING
+        tags:
+        - tag: scope
+          value: performance
+    - uuid: f628b1318bec4e458cdcb4210007a33c
+      name: Unacknowledged alerts
+      type: TRAP
+      key: inspektor.alerts.unack
+      history: 31d
+      value_type: UNSIGNED
+      description: Alerts not yet acknowledged on the INspektor web interface.
+      tags:
+      - tag: component
+        value: inspektor
+    discovery_rules:
+    - uuid: 40db82ae386647958caab14a0f87444a
+      name: EtherNet/IP devices discovery
+      type: TRAP
+      key: inspektor.discovery
+      lifetime: '{$INSPEKTOR.LLD.LIFETIME}'
+      description: Device list pushed by INspektor-Zabbix. Only sent while the INspektor is reachable, so an outage does not mark devices as lost. {#ID} is the MAC address (PROFINET, EtherNet/IP) or the station address (PROFIBUS).
+      item_prototypes:
+      - uuid: 269209875c704610a65aa8051e9629a7
+        name: '{#NAME}: Breakdowns'
+        type: TRAP
+        key: device.breakdowns[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 1e4c022f977c4990a45c0241bf66bc88
+          expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/device.breakdowns[{#ID}])-min(/INspektor NT EtherNet-IP by Zabbix trapper/device.breakdowns[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Breakdowns increased'
+          priority: AVERAGE
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 49c9a9d8c73349119a72c44da323e8fe
+        name: '{#NAME}: Restarts'
+        type: TRAP
+        key: device.restarts[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 417b96661e2941fb93b81d58d9085e0c
+          expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/device.restarts[{#ID}])-min(/INspektor NT EtherNet-IP by Zabbix trapper/device.restarts[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Restarts increased'
+          priority: WARNING
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 053ef2374d3c47cda27ad205c94d6b5c
+        name: '{#NAME}: Frame gaps'
+        type: TRAP
+        key: device.framegaps[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 7c33773d5f2e4d9ab02569bf4ef84d68
+          expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/device.framegaps[{#ID}])-min(/INspektor NT EtherNet-IP by Zabbix trapper/device.framegaps[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Frame gaps increased'
+          priority: AVERAGE
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 4a592e1261c24d50b3a5852e3e59414f
+        name: '{#NAME}: Frame overtakes'
+        type: TRAP
+        key: device.overtakes[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 571d827b34db4685a6bffd11017ffe70
+          expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/device.overtakes[{#ID}])-min(/INspektor NT EtherNet-IP by Zabbix trapper/device.overtakes[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Frame overtakes increased'
+          priority: WARNING
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: f470e884e30a4f66ba1b5cd50089e969
+        name: '{#NAME}: Error frames'
+        type: TRAP
+        key: device.errorframes[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. Physical error frames sent + received (cable, connector, EMC).
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: fc414b147562406e8d1a680f302f9bed
+          expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/device.errorframes[{#ID}])-min(/INspektor NT EtherNet-IP by Zabbix trapper/device.errorframes[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Error frames increased'
+          priority: AVERAGE
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 9bdaa27ffb6047e4b258c23e5e4884e1
+        name: '{#NAME}: Jitter peak'
+        type: TRAP
+        key: device.jitter.peak[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: '%'
+        description: 'max(|min|, |max|), the value the INspektor web page shows. Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: fad0fdd10ceb4dc1898f353e5d2c65ad
+          expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/device.jitter.peak[{#ID}])>{$INSPEKTOR.JITTER.WARN:"{#ID}"} and nodata(/INspektor NT EtherNet-IP by Zabbix trapper/device.jitter.peak[{#ID}],{$INSPEKTOR.NODATA})=0
+          name: '{#NAME}: Jitter peak above {$INSPEKTOR.JITTER.WARN:"{#ID}"}%'
+          priority: WARNING
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: b76a121cbf0d41429a7b518aa19590fa
+        name: '{#NAME}: Jitter min'
+        type: TRAP
+        key: device.jitter.min[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: '%'
+        description: 'Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+      - uuid: 976f9f8415ec4af297bfc3ed873c4a6a
+        name: '{#NAME}: Jitter max'
+        type: TRAP
+        key: device.jitter.max[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: '%'
+        description: 'Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+      - uuid: 49b73577788e4fdc8dd2ac9a5ee4356e
+        name: '{#NAME}: Cycle time'
+        type: TRAP
+        key: device.cycletime[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: s
+        description: Average cycle time (RPI) of the last minute.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+      - uuid: 6e7ec0ff591d41d6af52bb2391d61696
+        name: '{#NAME}: Network load in'
+        type: TRAP
+        key: device.netload.in[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: '%'
+        description: Peak of the last minute, as % of a 100 Mbit/s link (12,500,000 bytes/s).
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 52c533dff7814ac8b490273154144183
+          expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/device.netload.in[{#ID}])>{$INSPEKTOR.NETLOAD.WARN:"{#ID}"}
+          name: '{#NAME}: Network load in above {$INSPEKTOR.NETLOAD.WARN:"{#ID}"}%'
+          priority: WARNING
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 245334af5e064b599b5b8660c9f53dee
+        name: '{#NAME}: Network load out'
+        type: TRAP
+        key: device.netload.out[{#ID}]
+        history: 31d
+        value_type: FLOAT
+        units: '%'
+        description: Peak of the last minute, as % of a 100 Mbit/s link (12,500,000 bytes/s).
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 323b3b1d56d846138967f7994073e1df
+          expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/device.netload.out[{#ID}])>{$INSPEKTOR.NETLOAD.WARN:"{#ID}"}
+          name: '{#NAME}: Network load out above {$INSPEKTOR.NETLOAD.WARN:"{#ID}"}%'
+          priority: WARNING
+          tags:
+          - tag: scope
+            value: performance
+    tags:
+    - tag: class
+      value: network
+    - tag: target
+      value: inspektor
+    macros:
+    - macro: '{$INSPEKTOR.NODATA}'
+      value: 5m
+      description: Time without data before the collector is considered stopped.
+    - macro: '{$INSPEKTOR.EVENT.WINDOW}'
+      value: 1h
+      description: A counter increase inside this window raises a problem.
+    - macro: '{$INSPEKTOR.LLD.LIFETIME}'
+      value: 7d
+      description: How long a device that left the network keeps its items.
+    - macro: '{$INSPEKTOR.JITTER.WARN}'
+      value: '50'
+      description: 'Jitter peak warning, %. Per device: {$INSPEKTOR.JITTER.WARN:"<MAC>"}.'
+    - macro: '{$INSPEKTOR.NETLOAD.WARN}'
+      value: '20'
+      description: 'Network load warning, % of 100 Mbit/s. Per device: {$INSPEKTOR.NETLOAD.WARN:"<MAC>"}.'
+    valuemaps:
+    - uuid: cb758daccda84eb1a4a067f3999c0ce5
+      name: INspektor bus status
+      mappings:
+      - value: '0'
+        newvalue: Unknown
+      - value: '1'
+        newvalue: NoData
+      - value: '2'
+        newvalue: Active
+      - value: '3'
+        newvalue: Warning
+      - value: '4'
+        newvalue: Error
+      - value: '5'
+        newvalue: Deactivated
+  - uuid: 24197b344a3a45d09fdfd41f2efea108
+    template: INspektor NT PROFIBUS by Zabbix trapper
+    name: INspektor NT PROFIBUS by Zabbix trapper
+    description: 'Indu-Sol INspektor NT (PROFIBUS) diagnostics pushed by the INspektor-Zabbix collector through Zabbix trapper. One host per INspektor; the host name must match NAME in config.txt.
+
+
+      Setup and collector: https://github.com/IndusolAmerica/inspektor-zabbix
+
+      Author: Luis Aguirre, InduSol America'
+    vendor:
+      name: InduSol America
+      version: 7.0-1
+    groups:
+    - name: Templates/Industrial networks
+    items:
+    - uuid: d2cfd6004b0946a595364a29dd3ce038
+      name: Service heartbeat
+      type: TRAP
+      key: inspektor.heartbeat
+      history: 7d
+      value_type: UNSIGNED
+      description: Sent every cycle by INspektor-Zabbix. Missing data means the collector stopped.
+      tags:
+      - tag: component
+        value: service
+      triggers:
+      - uuid: cdc6d34986a4421f8a9fdb54dce104b7
+        expression: nodata(/INspektor NT PROFIBUS by Zabbix trapper/inspektor.heartbeat,{$INSPEKTOR.NODATA})=1
+        name: INspektor-Zabbix service is not sending data
+        priority: HIGH
+        description: No data from the INspektor-Zabbix collector. Check the scheduled task on the collector PC and access to the Zabbix server or proxy on port 10051.
+        tags:
+        - tag: scope
+          value: availability
+    - uuid: 59e9fe6a5d0c4077afd239fef5f2c719
+      name: Service version
+      type: TRAP
+      key: inspektor.service.version
+      history: 31d
+      value_type: CHAR
+      trends: '0'
+      preprocessing:
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1d
+      tags:
+      - tag: component
+        value: service
+    - uuid: c2129092baf145df869c39161a7c94c7
+      name: INspektor reachable
+      type: TRAP
+      key: inspektor.status
+      history: 31d
+      value_type: UNSIGNED
+      description: 1 = the INspektor answered over HTTP, 0 = it did not.
+      tags:
+      - tag: component
+        value: inspektor
+      triggers:
+      - uuid: 8e5c40770249467980ce30b440d8e06b
+        expression: max(/INspektor NT PROFIBUS by Zabbix trapper/inspektor.status,#3)=0
+        name: INspektor is not reachable
+        priority: HIGH
+        description: The collector could not read the INspektor for 3 consecutive cycles. The collector itself is running.
+        tags:
+        - tag: scope
+          value: availability
+    - uuid: 3e9e1ed66ebe45f0a7e91322af0d44f1
+      name: Last read error
+      type: TRAP
+      key: inspektor.error
+      history: 7d
+      value_type: TEXT
+      trends: '0'
+      preprocessing:
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1h
+      tags:
+      - tag: component
+        value: inspektor
+    - uuid: 66fd31d57026485d871580203bee5571
+      name: Devices
+      type: TRAP
+      key: inspektor.devices.total
+      history: 31d
+      value_type: UNSIGNED
+      description: Devices currently reported by the INspektor after filtering.
+      tags:
+      - tag: component
+        value: inspektor
+    - uuid: 6010041ae196467a94e2ce4acde38dcf
+      name: Bus status
+      type: TRAP
+      key: inspektor.bus.status
+      history: 31d
+      value_type: UNSIGNED
+      description: Overall bus status of the current INspektor measurement.
+      valuemap:
+        name: INspektor bus status
+      tags:
+      - tag: component
+        value: inspektor
+      triggers:
+      - uuid: 02e48fd5c75644b59fde4ac58490d147
+        expression: last(/INspektor NT PROFIBUS by Zabbix trapper/inspektor.bus.status)=4
+        name: Bus status is Error
+        priority: HIGH
+        tags:
+        - tag: scope
+          value: availability
+      - uuid: 7007ba2525ae49399ac705e5fb0a3ece
+        expression: last(/INspektor NT PROFIBUS by Zabbix trapper/inspektor.bus.status)=3
+        name: Bus status is Warning
+        priority: WARNING
+        tags:
+        - tag: scope
+          value: performance
+    - uuid: b259ee48b91e49a69c1dbc0a4df59c57
+      name: Unacknowledged alerts
+      type: TRAP
+      key: inspektor.alerts.unack
+      history: 31d
+      value_type: UNSIGNED
+      description: Alerts not yet acknowledged on the INspektor web interface.
+      tags:
+      - tag: component
+        value: inspektor
+    discovery_rules:
+    - uuid: e73a7e024c7748578d10167c45ed8db1
+      name: PROFIBUS devices discovery
+      type: TRAP
+      key: inspektor.discovery
+      lifetime: '{$INSPEKTOR.LLD.LIFETIME}'
+      description: Device list pushed by INspektor-Zabbix. Only sent while the INspektor is reachable, so an outage does not mark devices as lost. {#ID} is the MAC address (PROFINET, EtherNet/IP) or the station address (PROFIBUS).
+      item_prototypes:
+      - uuid: 4569697ae3ff4490b1eb95853e25efbd
+        name: '{#NAME}: Breakdowns'
+        type: TRAP
+        key: device.breakdowns[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: d9d826d62da64049992d0d0fb9d64494
+          expression: last(/INspektor NT PROFIBUS by Zabbix trapper/device.breakdowns[{#ID}])-min(/INspektor NT PROFIBUS by Zabbix trapper/device.breakdowns[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Breakdowns increased'
+          priority: AVERAGE
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: ac2446e9e3c549eeb7d49204b67e3379
+        name: '{#NAME}: Restarts'
+        type: TRAP
+        key: device.restarts[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 306d9cbf35f34b2facd61337ce59b1f6
+          expression: last(/INspektor NT PROFIBUS by Zabbix trapper/device.restarts[{#ID}])-min(/INspektor NT PROFIBUS by Zabbix trapper/device.restarts[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Restarts increased'
+          priority: WARNING
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 6e543f4ce43d4719900e4f34783c7b5b
+        name: '{#NAME}: Error telegrams'
+        type: TRAP
+        key: device.errorframes[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: 'Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. Physical issue on the segment: cable, connector, termination, EMC.'
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 8c3629e456a141b5b916611d7b56d279
+          expression: last(/INspektor NT PROFIBUS by Zabbix trapper/device.errorframes[{#ID}])-min(/INspektor NT PROFIBUS by Zabbix trapper/device.errorframes[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Error telegrams increased'
+          priority: AVERAGE
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 65eb0ffd124a45848762e50ade20ced0
+        name: '{#NAME}: Repeat telegrams'
+        type: TRAP
+        key: device.repeats[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: ba3b113d42594b878e5e8818dbc14a14
+          expression: last(/INspektor NT PROFIBUS by Zabbix trapper/device.repeats[{#ID}])-min(/INspektor NT PROFIBUS by Zabbix trapper/device.repeats[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Repeat telegrams increased'
+          priority: WARNING
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 5900985cf5434564842323a3f27ac2f0
+        name: '{#NAME}: Max repeats per cycle'
+        type: TRAP
+        key: device.repeats.max[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Highest repeat count in one cycle since measurement start.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+      - uuid: d67d1283f7864fe0b88c8e08dafc8b13
+        name: '{#NAME}: Unanswered slave diagnosis'
+        type: TRAP
+        key: device.diag.unanswered[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: 819e56a277714cd1aa3bb4fc64b926fa
+          expression: last(/INspektor NT PROFIBUS by Zabbix trapper/device.diag.unanswered[{#ID}])-min(/INspektor NT PROFIBUS by Zabbix trapper/device.diag.unanswered[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Unanswered slave diagnosis increased'
+          priority: WARNING
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: 615a261adb9c41a997f0e6a09398a911
+        name: '{#NAME}: Diagnosis internal'
+        type: TRAP
+        key: device.diag.internal[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. PROFIBUS-related issue on the device side (card, GSD).
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: a95e8b952c474fd3aadd499fc2a855cc
+          expression: last(/INspektor NT PROFIBUS by Zabbix trapper/device.diag.internal[{#ID}])-min(/INspektor NT PROFIBUS by Zabbix trapper/device.diag.internal[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Diagnosis internal increased'
+          priority: AVERAGE
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+      - uuid: ee3ea5867f944831ba148e6c3329e830
+        name: '{#NAME}: Diagnosis external'
+        type: TRAP
+        key: device.diag.external[{#ID}]
+        history: 31d
+        value_type: UNSIGNED
+        description: Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. Issue external to PROFIBUS (I/O short circuit, motor fault).
+        tags:
+        - tag: component
+          value: device
+        - tag: kind
+          value: '{#KIND}'
+        trigger_prototypes:
+        - uuid: d69cbdd89977409dba9c4af1f9c413b5
+          expression: last(/INspektor NT PROFIBUS by Zabbix trapper/device.diag.external[{#ID}])-min(/INspektor NT PROFIBUS by Zabbix trapper/device.diag.external[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
+          name: '{#NAME}: Diagnosis external increased'
+          priority: INFO
+          description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
+          tags:
+          - tag: scope
+            value: performance
+    tags:
+    - tag: class
+      value: network
+    - tag: target
+      value: inspektor
+    macros:
+    - macro: '{$INSPEKTOR.NODATA}'
+      value: 5m
+      description: Time without data before the collector is considered stopped.
+    - macro: '{$INSPEKTOR.EVENT.WINDOW}'
+      value: 1h
+      description: A counter increase inside this window raises a problem.
+    - macro: '{$INSPEKTOR.LLD.LIFETIME}'
+      value: 7d
+      description: How long a device that left the network keeps its items.
+    valuemaps:
+    - uuid: 60f5f37e63b24814b9752731fbb6161f
+      name: INspektor bus status
+      mappings:
+      - value: '0'
+        newvalue: Unknown
+      - value: '1'
+        newvalue: NoData
+      - value: '2'
+        newvalue: Active
+      - value: '3'
+        newvalue: Warning
+      - value: '4'
+        newvalue: Error
+      - value: '5'
+        newvalue: Deactivated

@@ -1,0 +1,50 @@
+# INspektor-Zabbix configuration
+# Lines starting with # are comments. Changes are picked up on the next cycle,
+# no restart needed.
+
+# ---------------------------------------------------------------- Zabbix
+# Zabbix server or proxy that receives the data (trapper port, usually 10051).
+# If the INspektor hosts are monitored by a proxy, put the proxy address here.
+ZABBIX_SERVER=
+ZABBIX_PORT=10051
+
+# Optional certificate-based TLS on port 10051. Leave empty for no encryption.
+ZABBIX_TLS_CA_FILE=
+ZABBIX_TLS_CERT_FILE=
+ZABBIX_TLS_KEY_FILE=
+
+# Only needed for --provision (creates the hosts for you). Not used while running.
+# Example: http://zabbix.example.com/zabbix
+ZABBIX_API_URL=
+ZABBIX_API_TOKEN=
+ZABBIX_HOST_GROUP=Industrial networks/INspektor
+
+# ---------------------------------------------------------------- Collector
+# Seconds between readings. Minimum 10.
+CHECK_INTERVAL=30
+HTTP_TIMEOUT=5
+# Values kept on disk while Zabbix is unreachable. Oldest are dropped beyond this.
+BUFFER_MAX_ROWS=500000
+VENDOR=InduSol America
+
+# ---------------------------------------------------------------- INspektors
+# One block per INspektor. A block starts at every IP= line.
+#   IP     INspektor NT address (HTTP, port 80)
+#   NAME   exactly the host name in Zabbix
+#   TYPE   PN (PROFINET), EIP (EtherNet/IP) or PB (PROFIBUS)
+#   SUBNET optional, informative
+#
+# Example, replace with your own:
+
+IP=192.168.0.10
+NAME=Line1-PROFINET
+TYPE=PN
+SUBNET=255.255.255.0
+
+# IP=192.168.0.11
+# NAME=Line2-EtherNetIP
+# TYPE=EIP
+#
+# IP=192.168.0.12
+# NAME=Paint-Shop-PROFIBUS
+# TYPE=PB
