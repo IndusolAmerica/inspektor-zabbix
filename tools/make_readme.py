@@ -132,8 +132,9 @@ inside `{{$INSPEKTOR.EVENT.WINDOW}}` and resolves when the window is clean.
 Gauges (jitter, network load, cycle time) are the last minute, matching the
 *Last minute* column.
 
-Jitter is not sent for a minute in which the device had a breakdown or frame gaps:
-the INspektor then reports +/-100 %, which is an artefact and would distort graphs.
+Jitter is not sent for a minute in which the device had a breakdown, or when it reads
++/-100 % or beyond: no telegrams arrived, so the value is an artefact and would distort
+graphs. Frame gaps alone do not suppress it.
 PROFIBUS has no jitter, frame gaps or network load, so those items do not exist on
 PROFIBUS hosts.
 

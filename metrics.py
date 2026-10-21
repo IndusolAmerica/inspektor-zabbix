@@ -23,8 +23,8 @@ from collections import namedtuple
 M = namedtuple("M", "key name vtype units kind trigger desc")
 
 _CNT = "Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts."
-_JIT = ("Last minute. Not sent while the station had breakdowns or frame gaps in that minute: "
-        "the INspektor then reports +/-100%, which is an artefact, not a measurement.")
+_JIT = ("Last minute. Not sent for a minute in which the station had a breakdown, or when the "
+        "value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.")
 _NL = "Peak of the last minute, as % of a 100 Mbit/s link (12,500,000 bytes/s)."
 
 PROFINET = [
@@ -53,7 +53,7 @@ PROFINET = [
 ETHERNETIP = [
     M("breakdowns",   "Breakdowns",        "UNSIGNED", "", "counter", ("AVERAGE", "increase", None), _CNT),
     M("restarts",     "Restarts",          "UNSIGNED", "", "counter", ("WARNING", "increase", None), _CNT),
-    M("framegaps",    "Frame gaps",        "UNSIGNED", "", "counter", ("AVERAGE", "increase", None), _CNT),
+    M("framegaps",    "Frame gaps",        "UNSIGNED", "", "counter", ("WARNING", "increase", None), _CNT),
     M("overtakes",    "Frame overtakes",   "UNSIGNED", "", "counter", ("WARNING", "increase", None), _CNT),
     M("errorframes",  "Error frames",      "UNSIGNED", "", "counter", ("AVERAGE", "increase", None),
       _CNT + " Physical error frames sent + received (cable, connector, EMC)."),

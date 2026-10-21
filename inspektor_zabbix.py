@@ -26,7 +26,7 @@ from buffer import ValueBuffer
 from model import TEMPLATE_BY_TYPE, discovery_value, metric_values
 from zbx_sender import ZabbixSender, ZabbixSendError, make_value
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 FLUSH_MAX_PER_CYCLE = 20 * 250   # values drained from the buffer per cycle
 
 log = logging.getLogger("inspektor-zabbix")

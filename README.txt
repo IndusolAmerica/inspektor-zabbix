@@ -83,7 +83,8 @@ the station address on PROFIBUS.
 
 PROFIBUS has no jitter, frame gaps or network load, so those items do not
 exist on PROFIBUS hosts. Jitter is not sent for a minute in which the station
-had breakdowns or frame gaps, because the INspektor then reports +/-100%.
+had a breakdown, or when it reads +/-100% or beyond: no telegrams arrived, so
+the value is an artefact.
 
 Thresholds are macros on the template. Override them per host, or per device
 with a context macro, for example {$INSPEKTOR.JITTER.WARN:"00:20:D5:01:64:92"}.

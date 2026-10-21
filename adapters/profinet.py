@@ -15,7 +15,7 @@ Only stations with the PROFINET status bit (11) are kept. Devices need a
 name; switches are kept with or without one.
 """
 
-from adapters.common import (dig, fill_bus, get_json, jitter_triplet, netload_pct, num)
+from adapters.common import (dig, fill_bus, get_json, meaningful_jitter, netload_pct, num)
 from model import Device, Snapshot
 
 CUR, HIS = "lastmin", "history_all"
@@ -39,16 +39,10 @@ def _counter(st, window, key):
     return num(dig(st, window, "pn_diagnosis", "counter", key))
 
 
-def jitter_is_meaningful(st, window):
-    """A window with a breakdown or frame gaps has no measurable jitter: no
-    telegrams arrived, the +/-100 % reported is an artefact."""
-    return _counter(st, window, "breakdown") == 0 and _counter(st, window, "frame_gaps") == 0
-
 
 def station_metrics(st) -> dict:
-    peak = jmin = jmax = None
-    if jitter_is_meaningful(st, CUR):
-        peak, jmin, jmax = jitter_triplet(dig(st, CUR, "pn_diagnosis", "jitter"))
+    peak, jmin, jmax = meaningful_jitter(dig(st, CUR, "pn_diagnosis", "jitter"),
+                                         _counter(st, CUR, "breakdown"))
     return {
         "breakdowns": _counter(st, HIS, "breakdown"),
         "restarts": _counter(st, HIS, "restart"),

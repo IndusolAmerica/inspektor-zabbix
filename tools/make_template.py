@@ -167,7 +167,7 @@ def build_template(typ: str, fmt: str) -> dict:
                         "must match NAME in config.txt.\n\n"
                         f"Setup and collector: {REPO_URL}\n"
                         f"Author: {AUTHOR}"),
-        "vendor": {"name": VENDOR, "version": f"{fmt}-1"},
+        "vendor": {"name": VENDOR, "version": f"{fmt}-2"},
         "groups": [{"name": TEMPLATE_GROUP}],
         "items": items,
         "discovery_rules": [lld],

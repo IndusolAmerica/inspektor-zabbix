@@ -18,7 +18,7 @@ recording session and gives inflated numbers (206 against 3 real).
 Name: general.alias, IP as fallback.
 """
 
-from adapters.common import (dig, fill_bus, get_json, jitter_triplet, netload_pct, num)
+from adapters.common import (dig, fill_bus, get_json, meaningful_jitter, netload_pct, num)
 from model import Device, Snapshot
 
 CUR, HIS = "lastMin", "history"
@@ -51,14 +51,9 @@ def _err_frames(st, window):
     return num(c.get("errorFramesRecv")) + num(c.get("errorFramesSend"))
 
 
-def jitter_is_meaningful(st, window):
-    return _cnt(st, window, "breakdown") == 0 and _cnt(st, window, "frameGaps") == 0
-
-
 def station_metrics(st) -> dict:
-    peak = jmin = jmax = None
-    if jitter_is_meaningful(st, CUR):
-        peak, jmin, jmax = jitter_triplet(dig(st, CUR, "etherNetIpDiagnosis", "jitter"))
+    peak, jmin, jmax = meaningful_jitter(dig(st, CUR, "etherNetIpDiagnosis", "jitter"),
+                                         _cnt(st, CUR, "breakdown"))
     cyc = dig(st, CUR, "etherNetIpDiagnosis", "cycleTime", "average")
     return {
         "breakdowns": _cnt(st, HIS, "breakdown"),

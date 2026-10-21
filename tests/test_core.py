@@ -176,6 +176,21 @@ def test_pn_jitter_suppressed_when_last_minute_had_breakdown():
     assert m["jitter.peak"] is None and m["jitter.min"] is None and m["jitter.max"] is None
 
 
+def test_pn_jitter_kept_with_frame_gaps_only():
+    st = json.loads(json.dumps(PN_STATION))
+    st["lastmin"]["pn_diagnosis"]["counter"]["frame_gaps"] = 3
+    assert profinet.select([st])[0].metrics["jitter.peak"] == 64.0
+
+
+def test_jitter_artefact_at_100_percent_is_dropped():
+    st = json.loads(json.dumps(PN_STATION))
+    st["lastmin"]["pn_diagnosis"]["jitter"] = {"min": -1000, "max": 0}   # -100 %, no breakdown counted
+    assert profinet.select([st])[0].metrics["jitter.peak"] is None
+    e = json.loads(json.dumps(EIP_STATION))
+    e["lastMin"]["etherNetIpDiagnosis"]["counter"]["breakdown"] = 2
+    assert ethernetip.select([e])[0].metrics["jitter.peak"] is None
+
+
 def test_pn_filters_non_profinet_and_unnamed():
     other = {"id": 9, "general": {"name": "printer", "status": 0, "mac": "x"}}
     unnamed = json.loads(json.dumps(PN_STATION)); unnamed["general"]["name"] = ""
@@ -191,8 +206,8 @@ def test_eip_windows_units_and_name_fallback():
     assert d.metrics["errorframes"] == 1
     assert d.metrics["cycletime"] == pytest.approx(0.049847)
     assert d.metrics["netload.in"] == pytest.approx(18194 / 12_500_000 * 100, abs=0.001)
-    # lastMin had a frame gap -> jitter of that minute is not meaningful
-    assert d.metrics["jitter.peak"] is None
+    # lastMin had a frame gap but no breakdown -> jitter is still a measurement (v0.1.1)
+    assert d.metrics["jitter.peak"] == 1.5
     assert set(d.metrics) == {m.key for m in metrics.ETHERNETIP}
 
 

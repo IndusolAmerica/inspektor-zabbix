@@ -60,8 +60,9 @@ inside `{$INSPEKTOR.EVENT.WINDOW}` and resolves when the window is clean.
 Gauges (jitter, network load, cycle time) are the last minute, matching the
 *Last minute* column.
 
-Jitter is not sent for a minute in which the device had a breakdown or frame gaps:
-the INspektor then reports +/-100 %, which is an artefact and would distort graphs.
+Jitter is not sent for a minute in which the device had a breakdown, or when it reads
++/-100 % or beyond: no telegrams arrived, so the value is an artefact and would distort
+graphs. Frame gaps alone do not suppress it.
 PROFIBUS has no jitter, frame gaps or network load, so those items do not exist on
 PROFIBUS hosts.
 
@@ -129,9 +130,9 @@ the device ID:
 |{#NAME}: Error frames|Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. Physical error frames sent + received (cable, connector, EMC).||`device.errorframes[{#ID}]`|
 |{#NAME}: Alarms high|Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. PROFINET-related issue on the device side.||`device.alarms.high[{#ID}]`|
 |{#NAME}: Alarms low|Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. Issue external to PROFINET (I/O, motor, etc.).||`device.alarms.low[{#ID}]`|
-|{#NAME}: Jitter peak|max(\|min\|, \|max\|), the value the INspektor web page shows. Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.|%|`device.jitter.peak[{#ID}]`|
-|{#NAME}: Jitter min|Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.|%|`device.jitter.min[{#ID}]`|
-|{#NAME}: Jitter max|Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.|%|`device.jitter.max[{#ID}]`|
+|{#NAME}: Jitter peak|max(\|min\|, \|max\|), the value the INspektor web page shows. Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.|%|`device.jitter.peak[{#ID}]`|
+|{#NAME}: Jitter min|Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.|%|`device.jitter.min[{#ID}]`|
+|{#NAME}: Jitter max|Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.|%|`device.jitter.max[{#ID}]`|
 |{#NAME}: Network load in|Peak of the last minute, as % of a 100 Mbit/s link (12,500,000 bytes/s).|%|`device.netload.in[{#ID}]`|
 |{#NAME}: Network load out|Peak of the last minute, as % of a 100 Mbit/s link (12,500,000 bytes/s).|%|`device.netload.out[{#ID}]`|
 
@@ -203,9 +204,9 @@ the device ID:
 |{#NAME}: Frame gaps|Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.||`device.framegaps[{#ID}]`|
 |{#NAME}: Frame overtakes|Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts.||`device.overtakes[{#ID}]`|
 |{#NAME}: Error frames|Cumulative since the INspektor measurement started (History column on the device). Resets when a new measurement starts. Physical error frames sent + received (cable, connector, EMC).||`device.errorframes[{#ID}]`|
-|{#NAME}: Jitter peak|max(\|min\|, \|max\|), the value the INspektor web page shows. Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.|%|`device.jitter.peak[{#ID}]`|
-|{#NAME}: Jitter min|Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.|%|`device.jitter.min[{#ID}]`|
-|{#NAME}: Jitter max|Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.|%|`device.jitter.max[{#ID}]`|
+|{#NAME}: Jitter peak|max(\|min\|, \|max\|), the value the INspektor web page shows. Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.|%|`device.jitter.peak[{#ID}]`|
+|{#NAME}: Jitter min|Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.|%|`device.jitter.min[{#ID}]`|
+|{#NAME}: Jitter max|Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.|%|`device.jitter.max[{#ID}]`|
 |{#NAME}: Cycle time|Average cycle time (RPI) of the last minute.|s|`device.cycletime[{#ID}]`|
 |{#NAME}: Network load in|Peak of the last minute, as % of a 100 Mbit/s link (12,500,000 bytes/s).|%|`device.netload.in[{#ID}]`|
 |{#NAME}: Network load out|Peak of the last minute, as % of a 100 Mbit/s link (12,500,000 bytes/s).|%|`device.netload.out[{#ID}]`|
@@ -217,7 +218,7 @@ the device ID:
 |---|---|---|---|
 |{#NAME}: Breakdowns increased|The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.|`last(/TEMPLATE/device.breakdowns[{#ID}])-min(/TEMPLATE/device.breakdowns[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0`|Average|
 |{#NAME}: Restarts increased|The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.|`last(/TEMPLATE/device.restarts[{#ID}])-min(/TEMPLATE/device.restarts[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0`|Warning|
-|{#NAME}: Frame gaps increased|The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.|`last(/TEMPLATE/device.framegaps[{#ID}])-min(/TEMPLATE/device.framegaps[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0`|Average|
+|{#NAME}: Frame gaps increased|The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.|`last(/TEMPLATE/device.framegaps[{#ID}])-min(/TEMPLATE/device.framegaps[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0`|Warning|
 |{#NAME}: Frame overtakes increased|The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.|`last(/TEMPLATE/device.overtakes[{#ID}])-min(/TEMPLATE/device.overtakes[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0`|Warning|
 |{#NAME}: Error frames increased|The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.|`last(/TEMPLATE/device.errorframes[{#ID}])-min(/TEMPLATE/device.errorframes[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0`|Average|
 |{#NAME}: Jitter peak above {$INSPEKTOR.JITTER.WARN:"{#ID}"}%||`last(/TEMPLATE/device.jitter.peak[{#ID}])>{$INSPEKTOR.JITTER.WARN:"{#ID}"} and nodata(/TEMPLATE/device.jitter.peak[{#ID}],{$INSPEKTOR.NODATA})=0`|Warning|

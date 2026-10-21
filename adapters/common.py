@@ -46,6 +46,25 @@ def jitter_triplet(jit: dict):
     return max(abs(j_min), abs(j_max)), j_min, j_max
 
 
+JITTER_ARTEFACT_PCT = 100.0
+
+
+def meaningful_jitter(jit: dict, breakdowns_in_window):
+    """Jitter of one window, or (None, None, None) when it is not a measurement.
+
+    Not meaningful when the station had a breakdown in that window, or when the
+    value sits at +/-100 % or beyond: no telegrams arrived, so there is no
+    timing to measure. Frame gaps alone do NOT suppress it: verified on a live
+    EtherNet/IP network (21 Oct 2026) where a station with 3 frame gaps in the
+    minute still showed a valid 1.0 % on the INspektor web page."""
+    if breakdowns_in_window:
+        return None, None, None
+    peak, jmin, jmax = jitter_triplet(jit)
+    if peak is not None and peak >= JITTER_ARTEFACT_PCT:
+        return None, None, None
+    return peak, jmin, jmax
+
+
 def netload_pct(bytes_per_sec):
     if bytes_per_sec is None:
         return None

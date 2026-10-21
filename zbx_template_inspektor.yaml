@@ -15,7 +15,7 @@ zabbix_export:
       Author: Luis Aguirre, InduSol America'
     vendor:
       name: InduSol America
-      version: 7.0-1
+      version: 7.0-2
     groups:
     - name: Templates/Industrial networks
     items:
@@ -306,7 +306,7 @@ zabbix_export:
         history: 31d
         value_type: FLOAT
         units: '%'
-        description: 'max(|min|, |max|), the value the INspektor web page shows. Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        description: 'max(|min|, |max|), the value the INspektor web page shows. Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.'
         tags:
         - tag: component
           value: device
@@ -327,7 +327,7 @@ zabbix_export:
         history: 31d
         value_type: FLOAT
         units: '%'
-        description: 'Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        description: 'Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.'
         tags:
         - tag: component
           value: device
@@ -340,7 +340,7 @@ zabbix_export:
         history: 31d
         value_type: FLOAT
         units: '%'
-        description: 'Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        description: 'Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.'
         tags:
         - tag: component
           value: device
@@ -436,7 +436,7 @@ zabbix_export:
       Author: Luis Aguirre, InduSol America'
     vendor:
       name: InduSol America
-      version: 7.0-1
+      version: 7.0-2
     groups:
     - name: Templates/Industrial networks
     items:
@@ -619,7 +619,7 @@ zabbix_export:
         - uuid: 7c33773d5f2e4d9ab02569bf4ef84d68
           expression: last(/INspektor NT EtherNet-IP by Zabbix trapper/device.framegaps[{#ID}])-min(/INspektor NT EtherNet-IP by Zabbix trapper/device.framegaps[{#ID}],{$INSPEKTOR.EVENT.WINDOW})>0
           name: '{#NAME}: Frame gaps increased'
-          priority: AVERAGE
+          priority: WARNING
           description: The counter went up within {$INSPEKTOR.EVENT.WINDOW}. Resolves when the window is clean.
           tags:
           - tag: scope
@@ -673,7 +673,7 @@ zabbix_export:
         history: 31d
         value_type: FLOAT
         units: '%'
-        description: 'max(|min|, |max|), the value the INspektor web page shows. Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        description: 'max(|min|, |max|), the value the INspektor web page shows. Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.'
         tags:
         - tag: component
           value: device
@@ -694,7 +694,7 @@ zabbix_export:
         history: 31d
         value_type: FLOAT
         units: '%'
-        description: 'Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        description: 'Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.'
         tags:
         - tag: component
           value: device
@@ -707,7 +707,7 @@ zabbix_export:
         history: 31d
         value_type: FLOAT
         units: '%'
-        description: 'Last minute. Not sent while the station had breakdowns or frame gaps in that minute: the INspektor then reports +/-100%, which is an artefact, not a measurement.'
+        description: 'Last minute. Not sent for a minute in which the station had a breakdown, or when the value is +/-100% or beyond: no telegrams arrived, so it is an artefact, not a measurement.'
         tags:
         - tag: component
           value: device
@@ -816,7 +816,7 @@ zabbix_export:
       Author: Luis Aguirre, InduSol America'
     vendor:
       name: InduSol America
-      version: 7.0-1
+      version: 7.0-2
     groups:
     - name: Templates/Industrial networks
     items:
