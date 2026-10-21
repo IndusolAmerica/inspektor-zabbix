@@ -140,6 +140,13 @@ def test_profibus_gap_scan_ghosts_are_dropped():
     assert len(profibus.select(devs)) == 1
 
 
+def test_profibus_master_is_not_a_slave():
+    # live bus 21 Oct 2026: master at address 2 (status 1481), slaves 1449 / 1465
+    assert not profibus.is_active_slave(pb(2, out_hist=4433984, status=1481))
+    assert profibus.is_active_slave(pb(3, out_hist=232296, status=1465))
+    assert profibus.is_active_slave(pb(5, out_hist=232914, status=1449))
+
+
 def test_profibus_metrics_and_no_eth_metrics():
     d = profibus.select([pb(12, out_hist=9, name="PB-Drive-12")])[0]
     assert d.id == "12" and d.name == "PB-Drive-12"

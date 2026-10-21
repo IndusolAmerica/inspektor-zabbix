@@ -18,6 +18,14 @@ from model import Device, Snapshot
 
 MAX_STATION_ADDR = 125
 
+# general.status bit set only on the DP master (seen on a live bus: master at
+# address 2 had status 1481, slaves 1449/1465). Confirm the bit map with HQ.
+MASTER_STATUS_BIT = 1 << 6
+
+
+def is_master(dev) -> bool:
+    return bool(num((dev.get("general") or {}).get("status")) & MASTER_STATUS_BIT)
+
 
 def is_active_slave(dev) -> bool:
     """The master GAP-scans every free address, so empty slots pile up
@@ -27,6 +35,8 @@ def is_active_slave(dev) -> bool:
     is configured but has never answered."""
     addr = num(dev.get("id"))
     if addr <= 0 or addr > MAX_STATION_ADDR:
+        return False
+    if is_master(dev):
         return False
     general = dev.get("general", {}) or {}
     history = dev.get("history", {}) or {}
