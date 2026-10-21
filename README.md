@@ -35,11 +35,10 @@ Counters match the *History* column, jitter and network load match *Last minute*
 |---|---|
 | Template import, discovery, values and triggers on a clean Zabbix 7.0.31 | 14/14 checks (`test/validate_template.py`) |
 | Live PROFINET network, 6 devices, compared with the INspektor web page | Counters, network load and jitter formula match |
+| Live EtherNet/IP network, 4 devices | Counters, cycle time and network load match; real breakdowns and frame gaps raised alarms |
+| Live PROFIBUS DP bus, 4 slaves out of 129 addresses | Empty GAP-scan slots and the DP master filtered out; counters match |
 | Zabbix server down for 2 minutes | 340 values buffered, all delivered with original timestamps |
 | `INspektor-Zabbix.exe` on a PC without Python | Works |
-
-EtherNet/IP and PROFIBUS adapters are tested against recorded payloads; live
-validation pending.
 
 ## What's in here
 
